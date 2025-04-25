@@ -1,12 +1,12 @@
 const express = require('express');
-const { hashPassword, verifyPassword } = require('./password-utils');
-const { signJWT, verifyJWT } = require('./jwt-utils');
+const { hashPassword, verifyPassword } = require('./password');
+const { Jsonator, Jsonizer } = require('./jwt');
 
 const app = express();
 app.use(express.json());
 
 const PORT = 3000;
-const JWT_SECRET = 'my_secret';
+const JWT_SECRET = '980c0c8ab0d19c0163abdbba8e05b51b16a57faed75d5a2a52ca3348075dd5bd'; //https://jwtsecret.com/generate
 
 const books = [
   { id: 1, title: '1984', author: 'George Orwell' },
@@ -22,8 +22,9 @@ function authenticate(req, res, next) {
   if (!token) return res.status(401).json({ message: 'Token required' });
 
   try {
-    // TODO: Verify JWT
-
+    // the todo comment i deleted by mistake :D 
+    const decoded = Jsonizer(token, JWT_SECRET);
+    req.user = decoded; // since the authorizaAdmin is waiting for a user to verify 
     next();
   } catch {
     res.status(403).json({ message: 'Invalid token' });
@@ -49,7 +50,7 @@ app.post('/register', async (req, res) => {
     return res.status(409).json({ message: 'User already exists' });
 
   // TODO: Hash password
-
+  const hashedPassword = hashPassword(password);
   users.push({ username, password: hashedPassword, role });
 
   res.status(201).json({ message: 'User registered' });
@@ -60,9 +61,10 @@ app.post('/login', async (req, res) => {
   const user = users.find((u) => u.username === username);
 
   // TODO: Verify password
-
+  if (!verifyPassword(password, user.password))
+    return res.status(401).json({ message: 'who are youuu!!! wrong password hesh' });
   // TODO: Sign JWT
-
+  const token = Jsonator({ username, role: user.role }, JWT_SECRET, 120);
   res.json({ token });
 });
 
